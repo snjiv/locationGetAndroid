@@ -1,0 +1,106 @@
+ private FusedLocationProviderClient mFusedLocationProviderClient;
+
+    private Location mLastKnownLocation;
+
+    private double latitude, longitude;
+
+    private LocationCallback locationCallback;
+
+    private String completeAddress, city_name;
+
+    private LocationManager locationManager;
+    
+    
+    
+   mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
+   
+   
+   //Get Location as lat and long
+   
+    private void getDeviceLocation() {
+        checkPermission();
+        mFusedLocationProviderClient.getLastLocation()
+                .addOnCompleteListener(new OnCompleteListener<Location>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Location> task) {
+                        if (task.isSuccessful()) {
+                            mLastKnownLocation = task.getResult();
+                            if (mLastKnownLocation != null) {
+                                latitude = mLastKnownLocation.getLatitude();
+                                longitude = mLastKnownLocation.getLongitude();
+                                Toast.makeText(getActivity(), "Location fetched", Toast.LENGTH_SHORT).show();
+
+                            } else {
+                                final LocationRequest locationRequest = LocationRequest.create();
+                                locationRequest.setInterval(10000);
+                                locationRequest.setFastestInterval(5000);
+                                locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+                                locationCallback = new LocationCallback() {
+                                    @Override
+                                    public void onLocationResult(LocationResult locationResult) {
+                                        super.onLocationResult(locationResult);
+                                        if (locationResult == null) {
+                                            return;
+                                        }
+                                        mLastKnownLocation = locationResult.getLastLocation();
+                                        latitude = mLastKnownLocation.getLatitude();
+                                        longitude = mLastKnownLocation.getLongitude();
+
+                                        Toast.makeText(getActivity(), "Last Location fetched", Toast.LENGTH_SHORT).show();
+
+//                                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(mLastKnownLocation.getLatitude(), mLastKnownLocation.getLongitude()), DEFAULT_ZOOM));
+                                        mFusedLocationProviderClient.removeLocationUpdates(locationCallback);
+                                    }
+                                };
+
+                             checkPermission();
+                                mFusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, null);
+                            }
+
+                            getAddress(latitude, longitude);
+
+                        } else {
+                            Toast.makeText(getActivity(), "unable to get last location", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+    }
+    
+    
+    
+    //Get Complete Address with Lat and Long
+    
+     public String getAddress(double latitude, double longitude) {
+        StringBuilder result = new StringBuilder();
+        try {
+
+            System.out.println("get address");
+            Geocoder geocoder = new Geocoder(getActivity(), Locale.getDefault());
+            List<Address> addresses = geocoder.getFromLocation(latitude, longitude, 1);
+            if (addresses.size() > 0) {
+                System.out.println("size====" + addresses.size());
+                Address address = addresses.get(0);
+
+                city_name = address.getLocality();
+
+                location_txt.setText(city_name);
+
+                for (int i = 0; i <= addresses.get(0).getMaxAddressLineIndex(); i++) {
+                    if (i == addresses.get(0).getMaxAddressLineIndex()) {
+                        result.append(addresses.get(0).getAddressLine(i));
+                    } else {
+                        result.append(addresses.get(0).getAddressLine(i) + ",");
+                    }
+                }
+                System.out.println("ad==" + address);
+                System.out.println("result---" + result.toString());
+                completeAddress = result.toString();
+                Log.i("my", completeAddress);
+//                addressz.setText(result.toString()); // Here is you AutoCompleteTextView where you want to set your string address (You can remove it if you not need it)
+            }
+        } catch (IOException e) {
+            Log.e("tag", e.getMessage());
+        }
+
+        return result.toString();
+    }
